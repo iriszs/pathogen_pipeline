@@ -31,13 +31,14 @@ mapped_bam = bam + "/bam_mapped/"
 results = directory + "/results/"
 accession = results + "/accession_numbers/"
 science_names = results + "/scientific_names/"
+single_names = science_names + "/single_names/"
 sam = directory + "/sam_output/"
 tmp_directory = directory + "/tmp_directory/"
 log_directory = directory + "/log/"
 human_index = index_directory + "human"
 pathogen_index = index_directory + "pathogen"
 
-
+#make directories
 def makeDirectories():
 	os.makedirs(directory)
 	os.makedirs(unmapped)				
@@ -46,25 +47,121 @@ def makeDirectories():
 	os.makedirs(results)				
 	os.makedirs(accession)	
 	os.makedirs(science_names)
+	os.makedirs(single_names)
 	os.makedirs(sam)
 
-
+#command to make bowtie2 indexes for the human genome and the pathogen fasta
 def createBowtie2Index():
 	subprocess.run(["bowtie2-build", human_genome, human_index]) 
 	subprocess.run(["bowtie2-build", pathogen_fasta, pathogen_index])
 
-
+#command to run Bowtie2 to filter out the human genome
 def runBowtie2ToHumanGenome(f):
-	logfile = log_directory + f + ".txt"
+	logfile = log_directory + f + "human_run.txt"
 	basefilename = f.split("_r1")[-1]
- 	subprocess.run(["bowtie2", "-x", human_index, "-1", f, "-2", basefilename + "_r2.fastq", "--un-conc", unmapped + basefilename + ".fastq" "-S", tmp_directory + basefilename + ".sam", "--no-unal", "--no-hd", "-no-sq"], stdout=logfile)	
-		
+ 	subprocess.run(["bowtie2", "-x", human_index, "-1", f, "-2", basefilename + "_r2.fastq", "--un-conc", unmapped + basefilename + ".fastq" "-S", tmp_directory + basefilename + ".sam", "--no-unal", "--no-hd", "-no-sq"], stdout = logfile)	
 
+#command to run Bowtie2 against the pathogens
+def runBowtie2ToPathogens(f):
+	logfile = log_directory + f + "pathogen_run.txt"
+	basefilename = f.split("_r1")[-1]
+	subprocess.run(["bowtie2", "-x", pathogen_index, "-1", f, "-2", basefilename + "_r2.fastq", "-S", sam + basefilename + ".sam"], stdout = logfile)
+	
+#command to convert the sam file to bam file
+def samToBam(f):
+	basefilename = basename(f)
+	base = os.path.splitext(base)[0]
+	subprocess.run(["samtools", "view", "-b", "-S", "-o", bam + base + ".bam", f], stdout = logfile)
+	
+#command to remove the failed to align parts out of the bam file (flag=4)	
+def removeFailedToAlign(f):
+	base = os.path.splitext(basename(f))
+	subprocess.run(["samtools", "view", "-b", "-F", "4", f], stdout = mapped_bam + base + "mapped.bam" )	
+
+#get the accessionnumbers from the bam file
+def getAccessionNumbers(f):
+	base = os.path.splitext(basename(f))
+	subprocess.run(["bedtools", "bamtobed", "-i", f], stdout = accession + base + ".txt")
+
+#get all genome accession numbers and save them in a dictionary
+def get_Genomes():
+	AllGenomes = open(pathogen_fasta)
+
+	genomedict = {}
+
+	for line in AllGenomes:
+		if line.startswith(">gi"):
+			genome = line.split(">")[1].split(",")[0]
+			refname = genome.split("| ")[0]
+			organism = genome.split("| ")[1]
+			genomedict[refname] = organism
+		if line.startswith(">NW_") or line.startswith(">LWMK"):
+			genome = line.split(">")[1].split(",")[0]
+			refname = genome.split(" ")[0]
+			organismName = genome.split(" ")[1:]
+			organism = ' '.join(organismName)
+			genomedict[refname] = organism
+			
+	return genomedict
+
+#convert the accession numbers to scientific name
+def accessionToName(f, genomedict):
+	accession_nrs = []
+	bn = basename(f)
+
+	for line in open(f):
+		accession_nrs.append(line.split("\t")[0])
+
+	pathogenNames = []
+	outputfile = science_names + bn
+	openoutput = open(outputfile, "w")
+
+	for number in accession_nrs:
+		if number in genomedict:
+			pathogenNames.append(genomedict[number])
+
+	for i in pathogenNames:
+		openoutput.write(i + "\n")
+
+	openoutput.close()
+
+	outfile = open(outputfile, "r")
+	finalpathogenfile = single_names + bn
+	openfinalfile = open(finalpathogenfile, "w")
+
+	pathogens = []
+
+	for line in outfile:
+		newline = line.split(" ")[:2]
+		if newline in pathogens:
+			pass
+		else: 
+			pathogens.append(newline)
+
+	for pathogen in pathogens:
+		openfinalfile.write(' '.join(pathogen) + "\n")
+	
+	openfinalfile.close()	
+
+#call all the methods
 def main():
 	makeDirectories()
-	createBowtie2Index
-	#for every SET of files:
+	createBowtie2Index()
+	for f in glob.glob(inputdirectory):
+		if "r1" in f:
 		runBowtie2ToHumanGenome(f)
+	for f in glob.glob(unmapped):
+		if "r1" in f:
+			runBowtie2ToPathogens(f)
+	for f in glob.glob(sam):
+		samToBam(f)
+	for f in glob.glob(bam):
+		removeFailedToAlign(f)
+	for f in glob.glob(mapped_bam):
+		getAccessionNumbers(f)
+	genomedict = get_Genomes()
+	for f in glob.glob(accession):
+		accessionToName(f, genomedict)
 
 
 if __name__ == "__main__":
