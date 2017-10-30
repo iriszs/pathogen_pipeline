@@ -22,10 +22,11 @@ pathogen_fasta = "/media/imgorter/BD_1T/imgorter/bacteria_pathogen_viruses.fa"
 
 #these should not be altered!
 #are used to create directories and refer to paths in the commands
-inputfiles = inputdirectory + "*"
+inputfiles = inputdirectory + "*.fastq"
 directory = basedirectory + run_name
 index_directory = directory + "/index/"
 unmapped = directory + "/Unmapped/"
+unmappedfiles = unmapped + "*.fastq"
 bam = directory + "/bam_output/"
 mapped_bam = bam + "/bam_mapped/"
 results = directory + "/results/"
@@ -51,6 +52,8 @@ def makeDirectories():
     os.makedirs(science_names)
     os.makedirs(single_names)
     os.makedirs(sam)
+    os.makedirs(tmp_directory)
+    os.makedirs(log_directory)
 
 #command to make bowtie2 indexes for the human genome and the pathogen fasta
 def createBowtie2Index():
@@ -61,35 +64,47 @@ def createBowtie2Index():
 #command to run Bowtie2 to filter out the human genome
 def runBowtie2ToHumanGenome(f):
     print("Running Bowtie2 with file " + f + " against the human genome")
-    logfile = log_directory + f + "human_run.txt"
-    basefilename = f.split("_r1")[-1]
-    subprocess.run(["bowtie2", "-x", human_index, "-1", f, "-2", basefilename + "_r2.fastq", "--un-conc", unmapped + basefilename + ".fastq" "-S", tmp_directory + basefilename + ".sam", "--no-unal", "--no-hd", "-no-sq"], stdout = logfile)
+    filename = basename(f)
+    basefilename = filename.split("_r1")
+    logfile = log_directory + basefilename[0] + "_human_run.txt"
+    openlog = open(logfile, "w")
+    subprocess.run(["bowtie2", "-x", human_index, "-1", f, "-2", f.split("_r1")[0] + "_r2.fastq", "--un-conc", unmapped + basefilename[0] + ".fastq", "-S", tmp_directory + basefilename[0] + ".sam", "--no-unal", "--no-hd", "--no-sq", "-p", "32"], stdout = openlog)
 
 #command to run Bowtie2 against the pathogens
 def runBowtie2ToPathogens(f):
     print("Running Bowtie2 with file " + f + " against the pathogens")
-    logfile = log_directory + f + "pathogen_run.txt"
-    basefilename = f.split("_r1")[-1]
-    subprocess.run(["bowtie2", "-x", pathogen_index, "-1", f, "-2", basefilename + "_r2.fastq", "-S", sam + basefilename + ".sam"], stdout = logfile)
+    filename = basename(f)
+    basefilename = filename.split(".1.")
+    print(basefilename)
+    print(f.split(".1."))
+    logfile = log_directory + basefilename[0] + "_pathogen_run.txt"
+    openlog = open(logfile, "w")
+    subprocess.run(["bowtie2", "-x", pathogen_index, "-1", f, "-2", f.split(".1.")[0] + ".2.fastq", "-S", sam + basefilename[0] + ".sam", "-p", "32"], stdout = openlog)
 
 #command to convert the sam file to bam file
 def samToBam(f):
     print("Converting " + f + " to bam")
     basefilename = basename(f)
-    base = os.path.splitext(base)[0]
-    subprocess.run(["samtools", "view", "-b", "-S", "-o", bam + base + ".bam", f], stdout = logfile)
+    base = os.path.splitext(basefilename)[0]
+    subprocess.run(["samtools", "view", "-b", "-S", "-o", bam + base + ".bam", f])
 
 #command to remove the failed to align parts out of the bam file (flag=4)
 def removeFailedToAlign(f):
     print("Removing failed to align reads from this file: " + f)
-    base = os.path.splitext(basename(f))
-    subprocess.run(["samtools", "view", "-b", "-F", "4", f], stdout = mapped_bam + base + "mapped.bam")
+    basefilename = basename(f)
+    base = os.path.splitext(basefilename)[0]
+    outfile = mapped_bam + base + "mapped.bam"
+    openoutfile = open(outfile, "w")
+    subprocess.run(["samtools", "view", "-b", "-F", "4", f], stdout = openoutfile)
 
 #get the accessionnumbers from the bam file
 def getAccessionNumbers(f):
     print("Retrieving accession numbers from this file: " + f)
-    base = os.path.splitext(basename(f))
-    subprocess.run(["bedtools", "bamtobed", "-i", f], stdout = accession + base + ".txt")
+    basefilename = basename(f)
+    base = os.path.splitext(basefilename)[0]
+    outfile = accession + base + ".txt"
+    openoutfile = open(outfile, "w")
+    subprocess.run(["bedtools", "bamtobed", "-i", f], stdout = openoutfile)
 
 #get all genome accession numbers and save them in a dictionary
 def get_Genomes():
@@ -158,22 +173,22 @@ def main():
     print("*** START ***")
     makeDirectories()
     createBowtie2Index()
-    for f in glob.glob(inputdirectory):
+    for f in glob.glob(inputfiles):
         if "r1" in f:
-            runBowtie2ToHumanGenome(f)
-    for f in glob.glob(unmapped):
-        if "r1" in f:
+            runBowtie2ToHumanGenome(f)        
+    for f in glob.glob(unmappedfiles):
+        if ".1" in f:
             runBowtie2ToPathogens(f)
-    for f in glob.glob(sam):
+    for f in glob.glob(sam + "*.sam"):
         samToBam(f)
-    for f in glob.glob(bam):
+    for f in glob.glob(bam + "*.bam"):
         removeFailedToAlign(f)
-    for f in glob.glob(mapped_bam):
+    for f in glob.glob(mapped_bam + "*.bam"):
         getAccessionNumbers(f)
     genomedict = get_Genomes()
-    for f in glob.glob(accession):
+    for f in glob.glob(accession + "*.txt"):
         accessionToName(f, genomedict)
-
+    print("*****DONE*****"    
 
 if __name__ == "__main__":
     main()
