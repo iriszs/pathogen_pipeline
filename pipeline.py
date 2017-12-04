@@ -88,10 +88,14 @@ def runBowtie2ToPathogens(f):
 
 #command to convert the sam file to bam file
 def samToBam(f):
-	print("Converting " + f + " to bam")
 	basefilename = basename(f)
 	base = os.path.splitext(basefilename)[0]
-	subprocess.run(["samtools", "view", "-b", "-S", "-o", bam + base + ".bam", f])
+	print(base)
+	if os.path.isfile(bam + base + ".bam"):
+		print("this one has been executed already, skipping...") 
+	else:
+		print("Converting " + f + " to bam")
+		subprocess.run(["samtools", "view", "-b", "-S", "-o", bam + base + ".bam", f])
 
 #command to remove the failed to align parts out of the bam file (flag=4)
 def removeFailedToAlign(f):
@@ -120,16 +124,22 @@ def get_Genomes():
 
 	for line in AllGenomes:
 		if line.startswith(">gi"):
+			print("begint met gi")
 			genome = line.split(">")[1].split(",")[0]
 			refname = genome.split("| ")[0]
 			organism = genome.split("| ")[1]
 			genomedict[refname] = organism
 	
 		elif line.startswith(">JPKZ") or line.startswith(">MIEF") or line.startswith(">LL") or line.startswith(">AWXF") or line.startswith("EQ") or line.startswith(">NW_") or line.startswith(">LWMK") or line.startswith(">NZ_") or line.startswith(">NC_") or line.startswith(">KT"):
+			print("in de elif")
 			genome = line.split(">")[1].split(",")[0]
 			refname = genome.split(" ")[0]
 			organismName = genome.split(" ")[1:]
 			organism = ' '.join(organismName)
+			genomedict[refname] = organism
+			
+	for item in genomedict.values():
+		print(item)		
 
 	return genomedict
 
@@ -176,21 +186,21 @@ def accessionToName(f, genomedict):
 #call all the methods
 def main():
 	print("*** START ***")
-	makeDirectories()
-	createBowtie2Index()
-	for f in glob.glob(inputfiles):
-	    if "r1" in f:
-	       runBowtie2ToHumanGenome(f)
-	for f in glob.glob(unmappedfiles):
-	for f in glob.glob(inputfiles):
-		if "_1" in f:
-			runBowtie2ToPathogens(f)
-	for f in glob.glob(sam + "*.sam"):
-		samToBam(f)
-	for f in glob.glob(bam + "*.bam"):
-		removeFailedToAlign(f)
-	for f in glob.glob(mapped_bam + "*.bam"):
-		getAccessionNumbers(f)
+	#makeDirectories()
+	#createBowtie2Index()
+	#for f in glob.glob(inputfiles):
+	#    if "r1" in f:
+	#       runBowtie2ToHumanGenome(f)
+	#for f in glob.glob(unmappedfiles):
+	#for f in glob.glob(inputfiles):
+	#	if "_1" in f:
+	#		runBowtie2ToPathogens(f)
+	#~ for f in glob.glob(sam + "*.sam"):
+		#~ samToBam(f)
+	#~ for f in glob.glob(bam + "*.bam"):
+		#~ removeFailedToAlign(f)
+	#~ for f in glob.glob(mapped_bam + "*.bam"):
+		#~ getAccessionNumbers(f)
 	genomedict = get_Genomes()
 	for f in glob.glob(accession + "*.txt"):
 		accessionToName(f, genomedict)

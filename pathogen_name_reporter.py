@@ -16,7 +16,9 @@ def get_Genomes(f):
 	"""
 	#multifasta that contains all organisms
 	AllGenomes = open(f)
-	outfile = open("/media/imgorter/Extern/pathogens2.txt", "w")
+	#outfile = open("/media/imgorter/Extern/pathogens1.txt", "w")
+	#outfile = open("/media/imgorter/Extern/pathogens2.txt", "w")
+	outfile = open("/media/imgorter/Extern/pathogens3.txt", "w")
 
 	#Create empty dictionary
 	genomedict = {}
@@ -54,6 +56,8 @@ def get_Genomes(f):
 
 
 def main():
+	#f = '/media/imgorter/Extern/NEW_pathogens/new_pathogens.fasta' = 2
+	#f = '/media/imgorter/Extern/Excel_list/genomes.fasta' = 1
 	f = '/media/imgorter/BD_1T/imgorter/bacteria_pathogen_viruses.fa'
 	get_Genomes(f)
 

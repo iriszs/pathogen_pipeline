@@ -22,6 +22,7 @@ def remove_zero(f):
 	#open the inputfile and read the lines
 	openf = open(f, "r")
 	lines = openf.readlines()
+
 	openf.close()
 	
 	#open the inputfile as write
@@ -46,7 +47,8 @@ def get_Genomes():
 	with the corresponding scientific name
 	"""
 	#multifasta that contains all organisms
-	AllGenomes = open("/media/imgorter/Extern/Excel_list/genomes.fasta")
+	AllGenomes = open("/media/imgorter/Extern/NEW_pathogens/new_pathogens.fasta")
+	#AllGenomes = open("/media/imgorter/Extern/Excel_list/genomes.fasta")
 
 	#Create empty dictionary
 	genomedict = {}
@@ -93,7 +95,7 @@ def replace_accession_with_name(f, genomedict):
 		#file is tab separated
 		splitted = line.split("\t")[0]
 		if splitted not in genomedict:
-			print(splitted + " not in genomedict")
+			pass
 		else:
 			#replace the accessionnumber with the scientific name that has the corresponding accessionnumber in the genomedict
 			line = str(line).replace(str(splitted), str(genomedict[splitted]))
@@ -102,7 +104,7 @@ def replace_accession_with_name(f, genomedict):
 			
 def main():
 	gd = get_Genomes()
-	for f in glob.glob("/media/imgorter/1TB_Seagate/run_new_pathogens/bam_output/bam_mapped/for_barplot/S14005_GGCTAC_unmappedmapped.bam.txt"):
+	for f in glob.glob("/media/imgorter/1TB_Seagate/barplot_data/pileup/with_new_fasta/BR_WB_SPM35.txt"):
 		remove_zero(f)
 		replace_accession_with_name(f, gd)
 	
