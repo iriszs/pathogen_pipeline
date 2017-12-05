@@ -12,7 +12,7 @@ from os.path import basename
 import os.path
 
 #################################################
-#THESE VARIABLES NEED TO BE ALTERED BY THE USER
+#THESE VARIABLES NEED TO BE CHANGED BY THE USER
 #################################################
 
 #Name for the run
@@ -28,7 +28,7 @@ human_genome = "/home/imgorter/Documents/Human_Genome/GRCh38_latest_genomic.fna"
 pathogen_fasta = "/media/imgorter/Extern/NEW_pathogens/genomes.fasta"
 
 #################################################
-#CONSTANTS (should not be altered)
+#CONSTANTS (should not be changed!)
 #################################################
 #are used to create directories and refer to paths in the commands
 inputfiles = inputdirectory + "*.fastq"
