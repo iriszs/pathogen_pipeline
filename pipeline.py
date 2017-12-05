@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 
-#imports
+#################################################
+#IMPORTS
+#################################################
+
 import collections
 import subprocess
 import os
@@ -8,20 +11,25 @@ import glob
 from os.path import basename
 import os.path
 
+#################################################
 #THESE VARIABLES NEED TO BE ALTERED BY THE USER
+#################################################
 
 #Name for the run
-run_name = "run_pathogens_from_report"
-#directory where directories with results can be placed
+run_name = "run1"
+#directory where directories with results can be stored
 basedirectory = "/media/imgorter/1TB_Seagate/"
 #directory where the inputfiles are (must be in fastq)
-inputdirectory = "/media/imgorter/6CEC0BDEEC0BA186/imgorter/Unmapped_data/"
-#place where the fasta of the human genome is
+#must be paired end reads and should look like this: sample1_r1.fastq sample1_r2.fastq 
+inputdirectory = "/media/imgorter/6CEC0BDEEC0BA186/imgorter/fastq/"
+#directory where the fasta of the human genome is
 human_genome = "/home/imgorter/Documents/Human_Genome/GRCh38_latest_genomic.fna"
-#place where the multifasta of the pathogen genomes is
-pathogen_fasta = "/media/imgorter/Extern/NEW_pathogens/new_pathogens.fasta"
+#directory where the multifasta of the pathogen genomes is
+pathogen_fasta = "/media/imgorter/Extern/NEW_pathogens/genomes.fasta"
 
-#these should not be altered!
+#################################################
+#CONSTANTS (should not be altered)
+#################################################
 #are used to create directories and refer to paths in the commands
 inputfiles = inputdirectory + "*.fastq"
 directory = basedirectory + run_name
@@ -38,11 +46,9 @@ sam = directory + "/sam_output/"
 tmp_directory = directory + "/tmp_directory/"
 log_directory = directory + "/log/"
 human_index = index_directory + "human"
-#human_index = "/home/imgorter/Documents/Human_Genome/Bowtie2_index/human"
 pathogen_index = index_directory + "pathogen"
-#pathogen_index = "/media/imgorter/Extern/Indexen/new_pathogens_index"
 
-#make directories
+#making directories
 def makeDirectories():
 	print("*** Making directories ***")
 	os.makedirs(directory)
@@ -186,21 +192,21 @@ def accessionToName(f, genomedict):
 #call all the methods
 def main():
 	print("*** START ***")
-	#makeDirectories()
-	#createBowtie2Index()
-	#for f in glob.glob(inputfiles):
-	#    if "r1" in f:
-	#       runBowtie2ToHumanGenome(f)
-	#for f in glob.glob(unmappedfiles):
-	#for f in glob.glob(inputfiles):
-	#	if "_1" in f:
-	#		runBowtie2ToPathogens(f)
-	#~ for f in glob.glob(sam + "*.sam"):
-		#~ samToBam(f)
-	#~ for f in glob.glob(bam + "*.bam"):
-		#~ removeFailedToAlign(f)
-	#~ for f in glob.glob(mapped_bam + "*.bam"):
-		#~ getAccessionNumbers(f)
+	makeDirectories()
+	createBowtie2Index()
+	for f in glob.glob(inputfiles):
+	    if "r1" in f:
+	       runBowtie2ToHumanGenome(f)
+	for f in glob.glob(unmappedfiles):
+	for f in glob.glob(inputfiles):
+		if "_1" in f:
+			runBowtie2ToPathogens(f)
+	for f in glob.glob(sam + "*.sam"):
+		samToBam(f)
+	for f in glob.glob(bam + "*.bam"):
+		removeFailedToAlign(f)
+	for f in glob.glob(mapped_bam + "*.bam"):
+		getAccessionNumbers(f)
 	genomedict = get_Genomes()
 	for f in glob.glob(accession + "*.txt"):
 		accessionToName(f, genomedict)
