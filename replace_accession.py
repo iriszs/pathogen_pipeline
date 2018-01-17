@@ -47,30 +47,31 @@ def get_Genomes():
 	with the corresponding scientific name
 	"""
 	#multifasta that contains all organisms
-	AllGenomes = open("/media/imgorter/Extern/NEW_pathogens/new_pathogens.fasta")
-	#AllGenomes = open("/media/imgorter/Extern/Excel_list/genomes.fasta")
+	filenames = ['/media/imgorter/Extern/Pathogen_genomes/Multifasta/bacteria_pathogen_viruses.fa', '/media/imgorter/Extern/Pathogen_genomes/Multifasta/genomes.fasta', '/media/imgorter/Extern/Pathogen_genomes/Multifasta/genomes_without_pseudomonas_and_excel']
 
 	#Create empty dictionary
 	genomedict = {}
 
-	
-	for line in AllGenomes:
-		#if the line startswith >gi, get the organism name between the |
-		if line.startswith(">gi"):
-			genome = line.split(">")[1].split(",")[0]
-			refname = genome.split("| ")[0]
-			organism = genome.split("| ")[1]
-			#add accessionnumber and name to dictionary
-			genomedict[refname] = ' '.join(organism.split(" ")[:2])
-			
-		#If the line startswitch something else, get the scientific name after the second space till the end
-		elif line.startswith(">JPKZ") or line.startswith(">MIEF") or line.startswith(">LL") or line.startswith(">AWXF") or line.startswith("EQ") or line.startswith(">NW_") or line.startswith(">LWMK") or line.startswith(">NZ_") or line.startswith(">NC_") or line.startswith(">KT"):
-			genome = line.split(">")[1].split(",")[0]
-			refname = genome.split(" ")[0]
-			organismName = genome.split(" ")[1:]
-			organism = ' '.join(organismName)
-			#add accessionnumber and name to dictionary
-			genomedict[refname] = ' '.join(organism.split(" ")[:2])
+	for fname in filenames:
+		print("working on genomedict " + fname)
+		with open(fname) as AllGenomes:
+			for line in AllGenomes:
+				#if the line startswith >gi, get the organism name between the |
+				if line.startswith(">gi"):
+					genome = line.split(">")[1].split(",")[0]
+					refname = genome.split("| ")[0]
+					organism = genome.split("| ")[1]
+					#add accessionnumber and name to dictionary
+					genomedict[refname] = ' '.join(organism.split(" ")[:2])
+					
+				#If the line startswitch something else, get the scientific name after the second space till the end
+				elif line.startswith(">JPKZ") or line.startswith(">MIEF") or line.startswith(">LL") or line.startswith(">AWXF") or line.startswith("EQ") or line.startswith(">NW_") or line.startswith(">LWMK") or line.startswith(">NZ_") or line.startswith(">NC_") or line.startswith(">KT"):
+					genome = line.split(">")[1].split(",")[0]
+					refname = genome.split(" ")[0]
+					organismName = genome.split(" ")[1:]
+					organism = ' '.join(organismName)
+					#add accessionnumber and name to dictionary
+					genomedict[refname] = ' '.join(organism.split(" ")[:2])
 		
 	
 	return genomedict
@@ -104,7 +105,7 @@ def replace_accession_with_name(f, genomedict):
 			
 def main():
 	gd = get_Genomes()
-	for f in glob.glob("/media/imgorter/1TB_Seagate/barplot_data/pileup/with_new_fasta/BR_WB_SPM35.txt"):
+	for f in glob.glob("/media/imgorter/6CEC0BDEEC0BA186/imgorter/barplot_data/Biopsy/pileup/*.txt"):
 		remove_zero(f)
 		replace_accession_with_name(f, gd)
 	

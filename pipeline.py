@@ -16,7 +16,7 @@ import os.path
 #################################################
 
 #Name for the run
-run_name = "run1"
+run_name = "surgical_samples"
 #directory where directories with results can be stored
 basedirectory = "/media/imgorter/1TB_Seagate/"
 #directory where the inputfiles are (must be in fastq)
@@ -25,7 +25,7 @@ inputdirectory = "/media/imgorter/6CEC0BDEEC0BA186/imgorter/fastq/"
 #directory where the fasta of the human genome is
 human_genome = "/home/imgorter/Documents/Human_Genome/GRCh38_latest_genomic.fna"
 #directory where the multifasta of the pathogen genomes is
-pathogen_fasta = "/media/imgorter/Extern/NEW_pathogens/genomes.fasta"
+pathogen_fasta = "/media/imgorter/Extern/all_genomes.fasta"
 
 #################################################
 #CONSTANTS (should not be changed!)
@@ -36,6 +36,7 @@ directory = basedirectory + run_name
 index_directory = directory + "/index/"
 unmapped = directory + "/Unmapped/"
 unmappedfiles = unmapped + "*.fastq"
+unmappedfiles = "/media/imgorter/6CEC0BDEEC0BA186/imgorter/Unmapped_data/*.fastq"
 bam = directory + "/bam_output/"
 mapped_bam = bam + "/bam_mapped/"
 results = directory + "/results/"
@@ -51,23 +52,36 @@ pathogen_index = index_directory + "pathogen"
 #making directories
 def makeDirectories():
 	print("*** Making directories ***")
-	os.makedirs(directory)
-	os.makedirs(index_directory)
-	os.makedirs(unmapped)
-	os.makedirs(bam)
-	os.makedirs(mapped_bam)
-	os.makedirs(results)
-	os.makedirs(accession)
-	os.makedirs(science_names)
-	os.makedirs(single_names)
-	os.makedirs(sam)
-	os.makedirs(tmp_directory)
-	os.makedirs(log_directory)
+	if not os.path.exists(directory):
+		os.makedirs(directory)
+	if not os.path.exists(index_directory):	
+		os.makedirs(index_directory)
+	if not os.path.exists(unmapped):		
+		os.makedirs(unmapped)
+	if not os.path.exists(bam):		
+		os.makedirs(bam)
+	if not os.path.exists(mapped_bam):	
+		os.makedirs(mapped_bam)
+	if not os.path.exists(results):	
+		os.makedirs(results)
+	if not os.path.exists(accession):	
+		os.makedirs(accession)
+	if not os.path.exists(science_names):	
+		os.makedirs(science_names)
+	if not os.path.exists(single_names):		
+		os.makedirs(single_names)
+	if not os.path.exists(sam):	
+		os.makedirs(sam)
+	if not os.path.exists(tmp_directory):		
+		os.makedirs(tmp_directory)
+	if not os.path.exists(log_directory):	
+		os.makedirs(log_directory)
+	
 
 #command to make bowtie2 indexes for the human genome and the pathogen fasta
 def createBowtie2Index():
 	print("*** Creating Bowtie2 index ***")
-	subprocess.run(["bowtie2-build", human_genome, human_index])
+	#subprocess.run(["bowtie2-build", human_genome, human_index])
 	subprocess.run(["bowtie2-build", pathogen_fasta, pathogen_index])
 
 #command to run Bowtie2 to filter out the human genome
@@ -77,7 +91,7 @@ def runBowtie2ToHumanGenome(f):
 	basefilename = filename.split("_r1")
 	logfile = log_directory + basefilename[0] + "_human_run.log"
 	openlog = open(logfile, "w")
-	subprocess.run(["bowtie2", "-x", human_index, "-1", f, "-2", f.split("_r1")[0] + "_r2.fastq", "--un-conc", unmapped + basefilename[0] + ".fastq", "-S", tmp_directory + basefilename[0] + ".sam", "--no-unal", "--no-hd", "--no-sq", "-p", "32"], stderr = openlog)
+	subprocess.run(["bowtie2", "-x", human_index, "-1", f, "-2", f.split("_r1")[0] + "_r2.fastq", "--un-conc", unmapped + basefilename[0] + ".fastq", "-S", tmp_directory + basefilename[0] + ".sam", "--no-unal", "--no-hd", "--no-sq", "-p", "12"], stderr = openlog)
 
 #command to run Bowtie2 against the pathogens
 def runBowtie2ToPathogens(f):
@@ -89,8 +103,7 @@ def runBowtie2ToPathogens(f):
 		print("this one has been executed already, skipping...") 
 	else:
 		openlog = open(logfile, "w")
-		subprocess.run(["bowtie2", "-x", pathogen_index, "-1", f, "-2", f.split("_1")[0] + "_2.fastq", "-S", sam + basefilename[0] + ".sam", "-p", "26"], stderr = openlog)
-	
+		subprocess.run(["bowtie2", "-x ", pathogen_index , "-1", f, "-2", f.split("_1")[0] + "_2.fastq", "-S", sam + basefilename[0] + ".sam", "-p", "12"], stderr = openlog)	
 
 #command to convert the sam file to bam file
 def samToBam(f):
@@ -124,28 +137,21 @@ def getAccessionNumbers(f):
 #get all genome accession numbers and save them in a dictionary
 def get_Genomes():
 	print("*** Creating genome dictionary ***")
-	AllGenomes = open(pathogen_fasta)
-
 	genomedict = {}
-
-	for line in AllGenomes:
-		if line.startswith(">gi"):
-			print("begint met gi")
-			genome = line.split(">")[1].split(",")[0]
-			refname = genome.split("| ")[0]
-			organism = genome.split("| ")[1]
-			genomedict[refname] = organism
-	
-		elif line.startswith(">JPKZ") or line.startswith(">MIEF") or line.startswith(">LL") or line.startswith(">AWXF") or line.startswith("EQ") or line.startswith(">NW_") or line.startswith(">LWMK") or line.startswith(">NZ_") or line.startswith(">NC_") or line.startswith(">KT"):
-			print("in de elif")
-			genome = line.split(">")[1].split(",")[0]
-			refname = genome.split(" ")[0]
-			organismName = genome.split(" ")[1:]
-			organism = ' '.join(organismName)
-			genomedict[refname] = organism
+	with open(pathogen_fasta) as AllGenomes:
+		for line in AllGenomes:
+			if line.startswith(">gi"):
+				genome = line.split(">")[1].split(",")[0]
+				refname = genome.split("| ")[0]
+				organism = genome.split("| ")[1]
+				genomedict[refname] = organism
 			
-	for item in genomedict.values():
-		print(item)		
+			elif line.startswith(">JPKZ") or line.startswith(">MIEF") or line.startswith(">LL") or line.startswith(">AWXF") or line.startswith("EQ") or line.startswith(">NW_") or line.startswith(">LWMK") or line.startswith(">NZ_") or line.startswith(">NC_") or line.startswith(">KT"):
+				genome = line.split(">")[1].split(",")[0]
+				refname = genome.split(" ")[0]
+				organismName = genome.split(" ")[1:]
+				organism = ' '.join(organismName)
+				genomedict[refname] = organism	
 
 	return genomedict
 
@@ -195,10 +201,9 @@ def main():
 	makeDirectories()
 	createBowtie2Index()
 	for f in glob.glob(inputfiles):
-	    if "r1" in f:
-	       runBowtie2ToHumanGenome(f)
+	   if "r1" in f:
+	      runBowtie2ToHumanGenome(f)
 	for f in glob.glob(unmappedfiles):
-	for f in glob.glob(inputfiles):
 		if "_1" in f:
 			runBowtie2ToPathogens(f)
 	for f in glob.glob(sam + "*.sam"):

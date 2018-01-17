@@ -1,12 +1,9 @@
 library(ggplot2)
-library(edgeR)
+library(RColorBrewer)
 library(scales)
+library(edgeR)
 
 
-#files <- list.files(path="/media/imgorter/6CEC0BDEEC0BA186/imgorter/barplot_data/pileup/combined/bp_per_pathogen/with_unknown/CSV", pattern="*.csv", full.names=T, recursive=FALSE)
-files <- list.files(path="/media/imgorter/6CEC0BDEEC0BA186/imgorter/barplot_data/pileup/combined/bp_per_pathogen", pattern="*.txt", full.names=T, recursive=FALSE)
-
-hmcol <- colorRampPalette(c("magenta2", "dodgerblue3", "white", "tan1", "firebrick3")) (n=54)
 
 ###############################################################################################
 #create empty dataframe
@@ -17,64 +14,69 @@ completeDF <- data.frame(pathogen=character(),
                          stringsAsFactors=FALSE) 
 ###############################################################################################
 
-pathogens <- ""
+#two different list of files. One with files that also contain the unidentified, one without
+#files <- list.files(path="/media/imgorter/1TB_Seagate/barplot_data/pileup/combined/bp_per_pathogen", pattern="*.txt", full.names=T, recursive=FALSE)
+files <- list.files(path="/media/imgorter/1TB_Seagate/Plot_data/barplot/bp_per_pathogen/without_unknown", pattern="*.txt", full.names=T, recursive=FALSE)
 
-for (x in files) {
-  data <- read.table(x, sep = "\t")[1] # load file
-  #data <- read.csv(x)[1]
-  data <- unlist(data)
-  print(as.character(data))
-  pathogens <- unique(c(pathogens, as.character(data)))
-}
+#create a color palette that uses continues colors
+hmcol <- colorRampPalette(c("magenta2", "dodgerblue3", "white", "tan1", "firebrick3")) (n=54)
 
-pathogens <- pathogens[which(pathogens!= "")]
-pathogens
+###############################################################################################
+
 for (x in files){
-  #some files are in txt format, some files are in csv
-  data <- read.table(x, sep = "\t") # load file
-  #data <- read.csv(x) # load file
+  #read table
+  data <- read.table(x, sep="\t") # load file
   #get the filename, filename without path and filename without extension
   filename <- tools::file_path_sans_ext(x)
   splitted <- strsplit(filename, "/")[[1]]
-  #the basename differs between files, because of the length of the path
-  #basename <- tail(splitted[[12]])
-  basename <- tail(splitted[[10]])
+  #get the basename of the file
+  basename <- tail(splitted[[9]])
   #combine the dataframe per file to one dataframe
+  newdata <- data
   data <- cbind(data, rep(basename, nrow(data)))
   #set the colnames of the dataframe
   colnames(data) <- c("pathogen", "bp", "sample")
   #perform a CPM on the basepair data to normalize
   data$cpm <- cpm(data$bp)
   completeDF <- rbind(completeDF, data)
-
 }
 
-#remove contamination pathogens
-completeDF <- completeDF[!grepl("Tick-borne encephalitis ", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("BeAn 58058", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Borrelia burgdorferi", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Human endogenous", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Human immunodeficiency", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Bacillus phage", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Rabies virus", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Saccharomyces cerevisiae", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Enterobacteria phage", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Phytophthora infestans", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Anaerococcus vaginalis", completeDF$pathogen), ]
-completeDF <- completeDF[!grepl("Finegoldia magna", completeDF$pathogen), ]
+library(xlsx)
+#write back to excel file
+write.xlsx(completeDF, "/media/imgorter/1TB_Seagate/Plot_data/Heatmap/bp_per_sample.xlsx") 
 
 
+
+###############################################################################################
+
+###############################################################################################
+
+#plot creation
 ggplot(completeDF,aes(x = sample, y = cpm, fill = pathogen)) +
   geom_bar(position = "fill",stat = "identity") +
-  scale_y_continuous(labels = percent_format()) + theme(legend.position = "none") +
+  scale_y_continuous(labels = percent_format()) + theme(legend.position = "right") +
   theme(axis.text.x = element_text(size=9, angle=90)) + scale_fill_manual(values=hmcol)
 
+###############################################################################################
 
-############################################################
-#plot the mean for every cohort
-############################################################
+###############################################################################################
 
 
+
+pathogens <- ""
+for (x in files) {
+  #data <- read.table(x, sep = "\t")[1] # load file
+  data <- read.csv(x)[1]
+  data <- unlist(data)
+  print(as.character(data))
+  pathogens <- unique(c(pathogens, as.character(data)))
+}
+
+length(pathogens)
+pathogens <- pathogens[which(pathogens!= "")]
+
+
+#get all files per group
 BR_WB_files <- grep("BR_WB", files, value=TRUE)
 BR_MG_files <- grep("BR_MG", files, value=TRUE)
 NL_MG_files <- grep("NL_MG", files, value=TRUE)
@@ -98,7 +100,6 @@ plot_mean <- function(file,desiredName, legendPos){
     newdf <- data[match(rownames(df), data[,1]),]
     newdf[which(is.na(newdf[,2])),2]  <- 0
     df <- df + newdf[,2]
-    df[!grepl("REVERSE", df$Name),]
   }
   df[,1] <- df[,1]/length(file)
   df[,2] <- rep(desiredName, length(pathogens))
@@ -111,15 +112,30 @@ plot_mean <- function(file,desiredName, legendPos){
     geom_bar(position = "fill",stat = "identity") +
     scale_y_continuous(labels = percent_format()) + theme(legend.position = legendPos) +
     theme(axis.text.x = element_text(size=9, angle=45)) + scale_fill_manual(values=hmcol)
-  # geom_text(aes(label = rownames(df)), size = 3, hjust = 0.5, vjust = 3, position =     "stack")
+    # geom_text(aes(label = rownames(df)), size = 3, hjust = 0.5, vjust = 3, position =     "stack")
 }
 
 
 #create PDF
 pdf("Desktop/mean_pathogenFiles.pdf")
-
+# Top 5:
+# Escherichia coli              
+# Toxoplasma gondii          
+# Cryptococcus gattii
+# Toxocara canis  
+# Trichinella spiralis
 plot_mean(BR_MG_files, "BR_MG_files", "none")
+# Toxoplasma gondii
+# Toxocara canis
+# Trichinella spiralis
+# Cryptococcus gattii
+# Solanum lycopersicum
 plot_mean(BR_WB_files, "BR_WB_files", "none")
+# Toxoplasma gondii
+# Toxocara canis
+# Pseudomonas aeruginosa
+# Trichinella spiralis         
+# Cryptococcus gattii
 plot_mean(NL_MG_files, "NL_MG_files", "none")
 dev.off()
 
@@ -129,3 +145,8 @@ plot_mean(BR_MG_files, "BR_MG_files", "right")
 plot_mean(BR_WB_files, "BR_WB_files", "right")
 plot_mean(NL_MG_files, "NL_MG_files", "right")
 dev.off()
+
+
+
+
+

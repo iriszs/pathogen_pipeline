@@ -39,7 +39,7 @@ def basepair_per_pathogen(f):
 	openf.close()		
 	
 	#open the outputfile
-	newf = open("/media/imgorter/1TB_Seagate/barplot_data/pileup/with_new_fasta/bp_per_pathogen/new" + bn, "w")
+	newf = open("/media/imgorter/6CEC0BDEEC0BA186/imgorter/barplot_data/Biopsy/pileup/bp_per_pathogen/" + bn, "w")
 	
 	#for every pathogen-basepair combination, write to file
 	for bp in bpdict:
@@ -50,7 +50,7 @@ def basepair_per_pathogen(f):
 	
 	
 def main():
-	for f in glob.glob("/media/imgorter/1TB_Seagate/barplot_data/pileup/combined/bp_per_pathogen/BR_WB_SPM35.txt"):
+	for f in glob.glob("/media/imgorter/6CEC0BDEEC0BA186/imgorter/barplot_data/Biopsy/pileup/*.txt"):
 		basepair_per_pathogen(f)
 
 
